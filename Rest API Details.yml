@@ -1,0 +1,176 @@
+Exercise: 10 - 
+
+Get process definitions:
+    http://localhost:8080/engine-rest/process-definition
+  
+Start a Process:
+     http://localhost:8080/engine-rest/process-definition/key/TwitterQAProcess/start
+     Header - content-type - JSON
+     body - raw 
+        {
+          "variables": {
+            "content" : {
+                "value" : "Hello!!!",
+                "type": "String"
+            }
+          }
+           
+        }
+ GET request to query for the user task of the process instance:
+  http://localhost:8080/engine-rest/task
+  
+    {
+        "id": "ab75dd7a-9025-11eb-a074-0a0027000002",
+        "name": "Review Tweet",
+        "assignee": null,
+        "created": "2021-03-29T11:28:22.975+1100",
+        "due": null,
+        "followUp": null,
+        "delegationState": null,
+        "description": null,
+        "executionId": "ab758f55-9025-11eb-a074-0a0027000002",
+        "owner": null,
+        "parentTaskId": null,
+        "priority": 50,
+        "processDefinitionId": "TwitterQAProcess:5:ef64455e-8d53-11eb-9186-0a0027000002",
+        "processInstanceId": "ab758f55-9025-11eb-a074-0a0027000002",
+        "taskDefinitionKey": "Activity_1nmuice",
+        "caseExecutionId": null,
+        "caseInstanceId": null,
+        "caseDefinitionId": null,
+        "suspended": false,
+        "formKey": "embedded:app:forms/ReviewTweet.html",
+        "tenantId": null
+    }
+  
+ Claim the task :
+     http://localhost:8080/engine-rest/task/ab75dd7a-9025-11eb-a074-0a0027000002/claim
+     {"usedId" : "demo"}
+ 
+ Complete the task:
+     http://localhost:8080/engine-rest/task/ab75dd7a-9025-11eb-a074-0a0027000002/complete
+     {"variables":
+        {"approved": {"value": true}
+        }
+     }
+  
+Get History of processes:
+    http://localhost:8080/engine-rest/history/process-instance?finished=false - gives completed and active state processes
+    http://localhost:8080/engine-rest/history/process-instance?finished=true - gives completed state processes 
+ 
+///////////////////////////////////////////////////////
+
+Exercise 11 - REST
+
+SuperUserTweet message :
+    http://localhost:8080/engine-rest/message
+    
+    {
+      "messageName": "superuserTweet",
+      "resultEnabled": "true",
+      "processVariables" : {
+        "content" : {"value" : "my message from rest,Cheers", "type": "String"}
+      }
+    }
+    
+    Process is completed with message visible on twitter site
+    
+
+Start Process instance in tasklist:
+    Process would be at Review Tweet stage
+get task id :
+    localhost:8080/engine-rest/task?active=true
+
+Stop External task worker:
+
+Complete the task:
+    localhost:8080/engine-rest/task/5051f899-9043-11eb-942b-0a0027000002/complete
+    {"variables": {"approved": {"value": false}}}
+   Process would be at "Send Rejection notification state" andis waiting for external task 
+
+-- External task completeion via rest api:
+
+Send tweetWithdrawn message:
+     http://localhost:8080/engine-rest/message
+     {
+      "messageName": "tweetWithdrawn",
+      "resultEnabled": "true",
+      "processVariables" : {
+        "content" : {"value" : "my message from rest,Cheers123", "type": "String"}
+      }
+    }
+    
+    Gives exception 
+    {
+    "type": "RestException",
+    "message": "org.camunda.bpm.engine.MismatchingMessageCorrelationException: Cannot correlate message 'tweetWithdrawn': No process definition or execution matches the parameters"
+    }
+    
+Get external task:
+    http://localhost:8080/engine-rest/external-task
+
+fetch and lock external task:
+    http://localhost:8080/engine-rest/external-task/fetchAndLock
+    {
+      "workerId": "exercise11",
+      "maxTasks": 1,
+      "topics":
+        [{
+          "topicName": "notification",
+          "lockDuration": 300000
+        }]
+    }
+   
+   response:
+    [
+    {
+        "activityId": "Activity_0t3j565",
+        "activityInstanceId": "Activity_0t3j565:baaa2230-9044-11eb-942b-0a0027000002",
+        "errorMessage": null,
+        "errorDetails": null,
+        "executionId": "baaa222f-9044-11eb-942b-0a0027000002",
+        "id": "baaa9761-9044-11eb-942b-0a0027000002",
+        "lockExpirationTime": "2021-03-29T16:54:35.711+1100",
+        "processDefinitionId": "TwitterQAProcess:6:8f08d7e8-9040-11eb-942b-0a0027000002",
+        "processDefinitionKey": "TwitterQAProcess",
+        "processDefinitionVersionTag": null,
+        "processInstanceId": "50518360-9043-11eb-942b-0a0027000002",
+        "retries": null,
+        "suspended": false,
+        "workerId": "exercise11",
+        "topicName": "notification",
+        "tenantId": null,
+        "variables": {
+            "approved": {
+                "type": "Boolean",
+                "value": false,
+                "valueInfo": {}
+            },
+            "content": {
+                "type": "String",
+                "value": "Hello Tweet",
+                "valueInfo": {}
+            }
+        },
+        "priority": 0,
+        "businessKey": null,
+        "extensionProperties": {}
+    }
+    ]
+
+Complete the external task:
+     http://localhost:8080/engine-rest/external-task/baaa9761-9044-11eb-942b-0a0027000002/complete/
+     
+ -- tweetWithdrawn message test:
+Start a new process form task list:
+    Process is at Review Tweet stage
+
+Send tweetWithdrawn message:
+    http://localhost:8080/engine-rest/message
+    {
+		"messageName": "tweetWithdrawn",
+		"correlationKeys": {"content": {"value": "will be withdrawn later", "type": "String"}}
+	}
+
+
+ 
